@@ -5,7 +5,7 @@
     <title>Gemini OS Dashboard</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="config.js"></script>
 
     <style>
@@ -48,7 +48,6 @@
             text-decoration: none;
         }
 
-        /* সিলেকশন এবং হোভার ইফেক্ট */
         .item:focus, .item.active {
             border-color: #3d85c6;
             transform: scale(1.1);
@@ -59,15 +58,27 @@
         
         .item img { width: 65px; margin-bottom: 12px; pointer-events: none; }
 
-        .user-info {
-            position: absolute; top: 40px; right: 50px;
-            text-align: right; opacity: 0.8;
+        /* QR Modal Style */
+        #qr-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+        #qrcode {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
         }
 
-        .ip-info {
-            position: absolute; bottom: 20px; right: 30px;
-            font-size: 14px; opacity: 0.4;
-        }
+        .user-info { position: absolute; top: 40px; right: 50px; text-align: right; opacity: 0.8; }
+        .ip-info { position: absolute; bottom: 20px; right: 30px; font-size: 14px; opacity: 0.4; }
     </style>
 </head>
 <body>
@@ -87,9 +98,11 @@
         <button class="item" id="btn-1" onclick="launch('https://netflix.com')">
             <img src="https://img.icons8.com/color/144/netflix.png"> Netflix
         </button>
-        <button class="item" id="btn-2" onclick="launch('tv.html')">
-            <img src="https://img.icons8.com/color/144/vlc.png"> Media Player
+        
+        <button class="item" id="btn-2" onclick="showRemoteQR()">
+            <img src="https://img.icons8.com/fluency/144/qr-code.png"> Remote Link
         </button>
+
         <button class="item" id="btn-3" onclick="launch('https://hotstar.com')">
             <img src="https://img.icons8.com/color/144/disney-plus.png"> Hotstar
         </button>
@@ -107,6 +120,12 @@
         </button>
     </div>
 
+    <div id="qr-modal" onclick="closeQR()">
+        <h2 style="margin-bottom: 20px;">Scan with Mobile</h2>
+        <div id="qrcode"></div>
+        <p>Press any key or click to Close</p>
+    </div>
+
     <div class="ip-info">Dashboard Version: 3.0.4 | GitHub Live Active</div>
 
     <script>
@@ -114,22 +133,45 @@
         let index = 0;
         const columns = 4;
 
-        // ১. ইউজার ইনফো লোড করা
         window.onload = function() {
+            // সিকিউরিটি চেক: লগইন না থাকলে ইনডেক্স এ পাঠাবে
+            if (localStorage.getItem("gemini_active") !== "true") {
+                window.location.href = "index.html";
+            }
+
             const mobile = localStorage.getItem("user_mobile");
             document.getElementById('welcome-msg').innerText = mobile ? "User: " + mobile : "Guest Mode";
-            
-            // কিবোর্ড ফোকাস ইনিশিয়াল করা
-            setTimeout(() => {
-                updateFocus();
-            }, 500);
+            updateFocus();
         };
 
         function launch(url) {
             window.location.href = url;
         }
 
-        // ২. ফোকাস আপডেট ফাংশন
+        // রিমোট QR দেখানোর ফাংশন
+        function showRemoteQR() {
+            const mobile = localStorage.getItem("user_mobile") || "guest";
+            const modal = document.getElementById('qr-modal');
+            const qrDiv = document.getElementById('qrcode');
+            
+            qrDiv.innerHTML = ""; // আগের QR মোছা
+            
+            // আপনার GitHub URL অনুযায়ী লিঙ্ক জেনারেট
+            const remoteUrl = `https://sarifuddinmondal.github.io/giminios3.0/remote.html?user=${mobile}`;
+            
+            new QRCode(qrDiv, {
+                text: remoteUrl,
+                width: 250,
+                height: 250
+            });
+
+            modal.style.display = "flex";
+        }
+
+        function closeQR() {
+            document.getElementById('qr-modal').style.display = "none";
+        }
+
         function updateFocus() {
             buttons.forEach((btn, i) => {
                 if (i === index) {
@@ -141,22 +183,22 @@
             });
         }
 
-        // ৩. উন্নত কিবোর্ড এবং রিমোট নেভিগেশন লজিক
         document.addEventListener('keydown', (e) => {
+            // যদি QR ওপেন থাকে তবে যেকোনো কিতে বন্ধ হবে
+            if (document.getElementById('qr-modal').style.display === "flex") {
+                closeQR();
+                return;
+            }
+
             if (e.key === 'ArrowRight') {
                 index = (index + 1) % buttons.length;
             } else if (e.key === 'ArrowLeft') {
                 index = (index - 1 + buttons.length) % buttons.length;
             } else if (e.key === 'ArrowUp') {
-                if (index >= columns) {
-                    index -= columns;
-                }
+                if (index >= columns) index -= columns;
             } else if (e.key === 'ArrowDown') {
-                if (index + columns < buttons.length) {
-                    index += columns;
-                } else {
-                    index = buttons.length - 1; 
-                }
+                if (index + columns < buttons.length) index += columns;
+                else index = buttons.length - 1; 
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 buttons[index].click();
@@ -164,7 +206,6 @@
             updateFocus();
         });
 
-        // ৪. মাউস দিয়ে হোভার করলে যেন ইনডেক্স ঠিক থাকে
         buttons.forEach((btn, i) => {
             btn.addEventListener('mouseenter', () => {
                 index = i;
