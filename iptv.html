@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini OS - IPTV Manager</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="config.js"></script>
+
+    <style>
+        body {
+            background: #121212; color: white;
+            font-family: 'Segoe UI', sans-serif; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+            margin: 0; min-height: 100vh;
+        }
+        .container { width: 100%; max-width: 1000px; }
+        
+        h1 { font-size: 36px; margin-bottom: 20px; color: #3d85c6; text-align: center; font-weight: 300; }
+
+        /* ফর্ম সেকশন */
+        .add-form {
+            background: rgba(255,255,255,0.05); padding: 25px;
+            border-radius: 20px; margin-bottom: 40px; 
+            display: flex; gap: 15px; flex-wrap: wrap;
+            border: 1px solid #333; backdrop-filter: blur(10px);
+        }
+        input {
+            flex: 1; min-width: 250px; padding: 15px; border-radius: 12px; border: none;
+            background: #222; color: white; outline: none; border: 2px solid #444;
+            font-size: 16px; transition: 0.3s;
+        }
+        input:focus { border-color: #3d85c6; background: #282828; }
+        
+        .save-btn {
+            padding: 15px 35px; border-radius: 12px; border: none;
+            background: #3d85c6; color: white; cursor: pointer; font-weight: bold;
+            font-size: 16px; transition: 0.3s;
+        }
+        .save-btn:hover { background: #2b6da3; transform: scale(1.05); }
+        .save-btn:active { transform: scale(0.95); }
+        
+        /* চ্যানেল লিস্ট গ্রিড */
+        .channel-list { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+            gap: 25px; 
+        }
+        .channel-card {
+            background: #1e1e1e; padding: 20px; border-radius: 20px;
+            text-align: center; border: 2px solid transparent; transition: 0.4s;
+            position: relative; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        
+        /* স্মার্ট টিভি ফোকাস স্টাইল */
+        .channel-card:focus, .channel-card.active {
+            border-color: #3d85c6; 
+            transform: translateY(-10px);
+            background: rgba(61, 133, 198, 0.15);
+            outline: none;
+            box-shadow: 0 15px 30px rgba(61, 133, 198, 0.4);
+        }
+
+        .channel-card h3 { margin: 15px 0 5px 0; font-size: 20px; color: #fff; }
+        .channel-card p { font-size: 12px; opacity: 0.5; word-break: break-all; }
+
+        .delete-btn { 
+            font-size: 12px; color: #ff4d4d; margin-top: 15px; 
+            cursor: pointer; padding: 8px 15px; border-radius: 8px;
+            background: rgba(255, 77, 77, 0.1); display: inline-block;
+            transition: 0.2s;
+        }
+        .delete-btn:hover { background: rgba(255, 77, 77, 0.3); color: white; }
+
+        #loading { color: #3d85c6; margin-bottom: 20px; font-weight: bold; letter-spacing: 1px; }
+
+        .back-home {
+            position: fixed; top: 20px; left: 20px;
+            background: #333; color: white; padding: 10px 20px;
+            border-radius: 50px; text-decoration: none; font-size: 14px;
+            border: 1px solid #444; transition: 0.3s;
+        }
+        .back-home:hover { background: #3d85c6; }
+    </style>
+</head>
+<body>
+
+    <a href="giminios.html" class="back-home">🏠 Back to Dashboard</a>
+
+    <div class="container">
+        <h1>📺 IPTV Channel Manager</h1>
+
+        <div class="add-form">
+            <input type="text" id="chName" placeholder="চ্যানেলের নাম (যেমন: Somoy TV)">
+            <input type="text" id="chUrl" placeholder="স্ট্রিম ইউআরএল (.m3u8 বা লিংক)">
+            <button class="save-btn" id="saveBtn" onclick="addChannel()">Save Channel</button>
+        </div>
+
+        <div id="loading" style="display:none;">☁ SYNCING WITH CLOUD...</div>
+
+        <div class="channel-list" id="channelList">
+            </div>
+    </div>
+
+    <script>
+        // ১. ডাটা লোড করার ফাংশন (config.js থেকে _supabase ব্যবহার করা হয়েছে)
+        async function fetchChannels() {
+            document.getElementById('loading').style.display = "block";
+            const { data, error } = await _supabase
+                .from('channels')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error:', error);
+            } else {
+                displayChannels(data);
+            }
+            document.getElementById('loading').style.display = "none";
+        }
+
+        // ২. স্ক্রিনে ডাটা দেখানো
+        function displayChannels(channels) {
+            const list = document.getElementById('channelList');
+            list.innerHTML = "";
+            
+            if(channels.length === 0) {
+                list.innerHTML = "<p style='grid-column: 1/-1; text-align:center; opacity:0.5; margin-top: 40px;'>No channels found. Add your first channel above!</p>";
+                return;
+            }
+
+            channels.forEach((ch, index) => {
+                const card = document.createElement('div');
+                card.className = 'channel-card';
+                card.tabIndex = "0"; // রিমোট ফোকাসের জন্য
+                card.id = `ch-${index}`;
+                
+                card.innerHTML = `
+                    <div class="channel-info" onclick="playChannel('${ch.url}', '${ch.name}')">
+                        <div style="font-size: 40px; margin-bottom: 10px;">📡</div>
+                        <h3>${ch.name}</h3>
+                        <p>${ch.url.substring(0, 40)}...</p>
+                    </div>
+                    <div class="delete-btn" onclick="event.stopPropagation(); deleteChannel(${ch.id})">🗑 Remove</div>
+                `;
+                
+                // এন্টার কি চাপলে প্লে হবে
+                card.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter') playChannel(ch.url, ch.name);
+                });
+
+                list.appendChild(card);
+            });
+        }
+
+        // ৩. চ্যানেল প্লে করার ফাংশন (tv.html এ পাঠানো হচ্ছে)
+        function playChannel(url, name) {
+            window.location.href = `tv.html?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name)}`;
+        }
+
+        // ৪. নতুন চ্যানেল সেভ করা
+        async function addChannel() {
+            const name = document.getElementById('chName').value;
+            const url = document.getElementById('chUrl').value;
+            
+            if(!name || !url) {
+                alert("দয়া করে নাম এবং ইউআরএল দুটোই লিখুন!");
+                return;
+            }
+
+            document.getElementById('loading').style.display = "block";
+
+            const { data, error } = await _supabase
+                .from('channels')
+                .insert([{ name: name, url: url }]);
+
+            if (error) {
+                alert("সেভ করতে সমস্যা হয়েছে: " + error.message);
+            } else {
+                document.getElementById('chName').value = "";
+                document.getElementById('chUrl').value = "";
+                fetchChannels(); 
+            }
+            document.getElementById('loading').style.display = "none";
+        }
+
+        // ৫. চ্যানেল ডিলিট করা
+        async function deleteChannel(id) {
+            if(!confirm("আপনি কি নিশ্চিতভাবে এই চ্যানেলটি মুছে ফেলতে চান?")) return;
+            
+            document.getElementById('loading').style.display = "block";
+            const { error } = await _supabase.from('channels').delete().eq('id', id);
+            
+            if(error) alert("মুছতে সমস্যা হয়েছে!");
+            fetchChannels();
+        }
+
+        // শুরুতে ডাটা লোড
+        fetchChannels();
+
+        // রিমোট কন্ট্রোল সাপোর্ট (Arrow Keys)
+        let focusIndex = -1;
+        document.addEventListener('keydown', (e) => {
+            const cards = document.querySelectorAll('.channel-card');
+            if(cards.length === 0) return;
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                focusIndex = (focusIndex + 1) % cards.length;
+                cards[focusIndex].focus();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                focusIndex = (focusIndex - 1 + cards.length) % cards.length;
+                cards[focusIndex].focus();
+            }
+        });
+    </script>
+</body>
+</html>
