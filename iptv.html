@@ -6,8 +6,7 @@
     <title>Gemini Stream - Live TV</title>
     
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
+    <script src="config.js"></script> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: black; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
@@ -49,67 +48,74 @@
 
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const sourceUrl = params.get('url');
-        const player = videojs('gemini-live-player');
-        const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+        // কনফিগ চেক করা
+        if (typeof CONFIG === 'undefined') {
+            document.getElementById('status').innerText = "Error: config.js not loaded!";
+        } else {
+            const params = new URLSearchParams(window.location.search);
+            const sourceUrl = params.get('url');
+            const player = videojs('gemini-live-player');
+            const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
-        async function init() {
-            if (!sourceUrl) return goBack();
-            await parseM3U(sourceUrl);
-            setupRemoteListener();
+            async function init() {
+                if (!sourceUrl) return goBack();
+                await parseM3U(sourceUrl);
+                setupRemoteListener();
+            }
+
+            async function parseM3U(url) {
+                try {
+                    const proxy = "https://api.allorigins.win/raw?url=";
+                    const response = await fetch(proxy + encodeURIComponent(url));
+                    if (!response.ok) throw new Error("Fetch failed");
+                    
+                    const text = await response.text();
+                    const lines = text.split('\n');
+                    const container = document.getElementById('channel-container');
+                    
+                    let currentName = "";
+                    lines.forEach(line => {
+                        line = line.trim();
+                        if (line.startsWith('#EXTINF:')) currentName = line.split(',')[1];
+                        else if (line.startsWith('http')) {
+                            const btn = document.createElement('div');
+                            btn.className = 'ch-item';
+                            btn.innerText = currentName;
+                            btn.onclick = () => { playStream(line, currentName); togglePlaylist(); };
+                            container.appendChild(btn);
+                        }
+                    });
+                    document.getElementById('loader').style.display = 'none';
+                } catch (e) { document.getElementById('status').innerText = "Load Failed: " + e.message; }
+            }
+
+            function playStream(url, name) {
+                document.getElementById('ch-name').innerText = name;
+                player.src({ src: url, type: 'application/x-mpegURL' });
+                player.play();
+            }
+
+            function togglePlaylist() { document.getElementById('playlist-drawer').classList.toggle('open'); }
+            function goBack() { window.location.href = 'giminios.html'; }
+
+            function setupRemoteListener() {
+                const mobile = localStorage.getItem("user_mobile");
+                supabaseClient
+                    .channel('remote-control')
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'remote_commands' }, payload => {
+                        if (payload.new.user_id === mobile) handleRemote(payload.new.command);
+                    })
+                    .subscribe();
+            }
+
+            function handleRemote(cmd) {
+                if (cmd === 'back') goBack();
+                if (cmd === 'vol_up') player.volume(player.volume() + 0.1);
+                if (cmd === 'vol_down') player.volume(player.volume() - 0.1);
+            }
+
+            init();
         }
-
-        async function parseM3U(url) {
-            try {
-                const proxy = "https://api.allorigins.win/raw?url=";
-                const response = await fetch(proxy + encodeURIComponent(url));
-                const text = await response.text();
-                const lines = text.split('\n');
-                const container = document.getElementById('channel-container');
-                
-                let currentName = "";
-                lines.forEach(line => {
-                    if (line.startsWith('#EXTINF:')) currentName = line.split(',')[1];
-                    else if (line.startsWith('http')) {
-                        const channelUrl = line;
-                        const btn = document.createElement('div');
-                        btn.className = 'ch-item';
-                        btn.innerText = currentName;
-                        btn.onclick = () => { playStream(channelUrl, currentName); togglePlaylist(); };
-                        container.appendChild(btn);
-                    }
-                });
-                document.getElementById('loader').style.display = 'none';
-            } catch (e) { document.getElementById('status').innerText = "Load Failed"; }
-        }
-
-        function playStream(url, name) {
-            document.getElementById('ch-name').innerText = name;
-            player.src({ src: url, type: 'application/x-mpegURL' });
-            player.play();
-        }
-
-        function togglePlaylist() { document.getElementById('playlist-drawer').classList.toggle('open'); }
-        function goBack() { window.location.href = 'giminios.html'; }
-
-        function setupRemoteListener() {
-            const mobile = localStorage.getItem("user_mobile");
-            supabaseClient
-                .channel('remote-control')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'remote_commands' }, payload => {
-                    if (payload.new.user_id === mobile) handleRemote(payload.new.command);
-                })
-                .subscribe();
-        }
-
-        function handleRemote(cmd) {
-            if (cmd === 'back') goBack();
-            if (cmd === 'vol_up') player.volume(player.volume() + 0.1);
-            if (cmd === 'vol_down') player.volume(player.volume() - 0.1);
-        }
-
-        init();
     </script>
 </body>
 </html>
