@@ -6,7 +6,7 @@
     <title>Gemini OS 3.0 - Powered by Sarifuddin</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="config.js"></script>
 
     <style>
@@ -23,7 +23,7 @@
             overflow: hidden;
         }
 
-        /* স্যামসাং স্টাইল বুট অ্যানিমেশন */
+        /* বুট স্ক্রিন */
         #boot-screen {
             display: flex;
             flex-direction: column;
@@ -44,6 +44,7 @@
             font-size: 45px;
             font-weight: 300;
             letter-spacing: 8px;
+            text-transform: uppercase;
             background: linear-gradient(to right, #fff 20%, #444 40%, #444 60%, #fff 80%);
             background-size: 200% auto;
             color: #fff;
@@ -54,22 +55,23 @@
             animation: shine 3s linear infinite;
         }
 
-        /* লগইন ইন্টারফেস */
-        #login-section {
+        /* লগইন এবং QR সেকশন */
+        #login-section, #qr-section {
             display: none;
             width: 100%;
             max-width: 450px;
-            padding: 40px;
+            padding: 20px;
             text-align: center;
-            animation: slideUp 1s ease-out;
+            animation: slideUp 0.8s ease-out;
         }
 
-        .login-box {
+        .container-box {
             background: rgba(255, 255, 255, 0.05);
-            padding: 30px;
+            padding: 40px 30px;
             border-radius: 40px;
             backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
 
         input {
@@ -83,12 +85,9 @@
             font-size: 20px;
             text-align: center;
             outline: none;
-            transition: 0.3s;
         }
 
-        input:focus { border-color: #3d85c6; box-shadow: 0 0 15px rgba(61, 133, 198, 0.3); }
-
-        .btn-login {
+        .btn-main {
             width: 100%;
             padding: 18px;
             border-radius: 15px;
@@ -96,111 +95,138 @@
             background: #fff;
             color: #000;
             font-weight: bold;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
             transition: 0.3s;
+            text-transform: uppercase;
+            margin-bottom: 10px;
         }
 
-        .btn-login:hover { background: #3d85c6; color: white; }
+        .btn-main:hover { background: #3d85c6; color: white; }
 
-        /* অ্যানিমেশন কি-ফ্রেমস */
-        @keyframes zoomFade {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
+        .btn-skip {
+            background: transparent;
+            color: #888;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            text-decoration: underline;
         }
 
-        @keyframes shine {
-            to { background-position: 200% center; }
+        /* QR Code Styling */
+        #qrcode {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            display: inline-block;
+            margin: 20px 0;
         }
 
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes zoomFade { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        .powered {
-            position: absolute;
-            bottom: 40px;
-            font-size: 12px;
-            letter-spacing: 2px;
-            opacity: 0.4;
-        }
+        .powered { position: absolute; bottom: 40px; font-size: 12px; letter-spacing: 2px; opacity: 0.4; }
     </style>
 </head>
 <body>
 
     <div id="boot-screen">
-        <img src="https://img.icons8.com/fluency/144/layers.png" class="company-logo" id="logoImg">
+        <img src="https://img.icons8.com/fluency/144/layers.png" class="company-logo">
         <h1 class="os-name">GEMINI OS</h1>
         <div class="powered">POWERED BY SARIFUDDIN</div>
     </div>
 
     <div id="login-section">
-        <div class="login-box">
-            <h2 style="font-weight: 300; letter-spacing: 2px;">WELCOME</h2>
-            <p style="opacity: 0.5; font-size: 14px; margin-top: 5px;">Login to continue to version 3.0</p>
-            
+        <div class="container-box">
+            <h2 style="font-weight: 300; letter-spacing: 2px;">LOGIN</h2>
+            <p style="opacity: 0.5; font-size: 14px; margin-top: 5px;">Pair your phone to control the OS</p>
             <input type="tel" id="mobileInput" placeholder="Enter Mobile Number" maxlength="11">
-            <button class="btn-login" id="loginBtn" onclick="doLogin()">START ENGINE</button>
-            <p id="status" style="margin-top: 15px; font-size: 13px; color: #3d85c6; display: none;">Syncing with Cloud OS...</p>
+            <button class="btn-main" id="loginBtn" onclick="doLogin()">PROCEED</button>
+            <button class="btn-skip" onclick="goToHome()">Skip & Go to Home</button>
+        </div>
+    </div>
+
+    <div id="qr-section">
+        <div class="container-box">
+            <h2 style="font-weight: 300; letter-spacing: 1px;">SCAN TO CONNECT</h2>
+            <p style="opacity: 0.5; font-size: 13px;">Scan this QR with your mobile to open Remote</p>
+            <div id="qrcode"></div>
+            <p id="remoteUrlText" style="font-size: 11px; color: #3d85c6; margin-bottom: 20px; word-break: break-all;"></p>
+            <button class="btn-main" onclick="goToHome()">START GEMINI OS</button>
         </div>
     </div>
 
     <script>
-        // পেজ লোড হওয়ার সময় চেক
         window.onload = function() {
-            const userSession = localStorage.getItem("gemini_active");
-
-            // ৫ সেকেন্ড বুট অ্যানিমেশন
             setTimeout(() => {
-                if (userSession) {
-                    // যদি আগেই লগইন থাকে, সরাসরি ড্যাশবোর্ডে পাঠাবে
+                const userSession = localStorage.getItem("gemini_active");
+                if (userSession === "true") {
                     window.location.href = "giminios.html";
                 } else {
-                    // নাহলে লগইন সেকশন দেখাবে
                     document.getElementById('boot-screen').style.display = "none";
                     document.getElementById('login-section').style.display = "block";
                 }
             }, 5000); 
         };
 
-        // লগইন ফাংশন
         async function doLogin() {
             const mobile = document.getElementById('mobileInput').value;
             const btn = document.getElementById('loginBtn');
-            const status = document.getElementById('status');
 
             if (mobile.length < 10) {
                 alert("Please enter a valid mobile number!");
                 return;
             }
 
-            btn.innerText = "CONNECTING...";
+            btn.innerText = "LINKING...";
             btn.disabled = true;
-            status.style.display = "block";
 
             try {
-                // config.js থেকে আসা '_supabase' ব্যবহার করে ডাটা সেভ
-                const { data, error } = await _supabase
-                    .from('users')
-                    .insert([{ mobile_number: mobile, login_time: new Date() }]);
+                // সুপাবেসে ডাটা সেভ
+                const { error } = await _supabase.from('users').insert([{ 
+                    mobile_number: mobile, 
+                    login_time: new Date().toISOString() 
+                }]);
 
                 if (error) throw error;
 
-                // সেশন সেভ করা
-                localStorage.setItem("gemini_active", "true");
+                // ইউজার আইডি সেভ করা
                 localStorage.setItem("user_mobile", mobile);
-
-                // ড্যাশবোর্ড লোড (পাইথন সার্ভারের রুট অনুযায়ী)
-                window.location.href = "giminios.html";
+                showQRCode(mobile);
 
             } catch (err) {
                 console.error("Supabase Error:", err.message);
-                // ডাটাবেস এরর দিলেও অফলাইনে বাইপাস করার সুবিধা (ডেভেলপমেন্টের জন্য)
-                localStorage.setItem("gemini_active", "true");
-                window.location.href = "giminios.html";
+                // এরর হলেও QR দেখাবে যাতে কাজ না থামে
+                showQRCode(mobile);
             }
+        }
+
+        function showQRCode(mobile) {
+            document.getElementById('login-section').style.display = "none";
+            document.getElementById('qr-section').style.display = "block";
+
+            // রিমোট ইউআরএল জেনারেট (GitHub Pages বা আপনার ডোমেইন অনুযায়ী)
+            // এটি এমনভাবে তৈরি যা রিমোট পেজে মোবাইল নম্বরটি পাঠিয়ে দেবে
+            const currentUrl = window.location.href.replace('index.html', '').replace(/\/$/, '');
+            const remoteUrl = `${currentUrl}/remote.html?user=${mobile}`;
+            
+            document.getElementById('remoteUrlText').innerText = remoteUrl;
+
+            // QR Code জেনারেশন
+            new QRCode(document.getElementById("qrcode"), {
+                text: remoteUrl,
+                width: 180,
+                height: 180,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+
+        function goToHome() {
+            localStorage.setItem("gemini_active", "true");
+            window.location.href = "giminios.html";
         }
     </script>
 </body>
