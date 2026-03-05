@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini OS Dashboard</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="config.js"></script>
+
+    <style>
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
+                        url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh; margin: 0; overflow: hidden;
+        }
+        
+        h1 { font-size: 50px; text-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 30px; font-weight: 300; }
+        
+        .menu { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 25px; 
+            justify-content: center; 
+            max-width: 90%; 
+        }
+        
+        .item {
+            width: 220px; height: 140px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-size: 18px; border: 3px solid transparent;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: white; cursor: pointer;
+            outline: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* রিমোট এবং কিবোর্ড সিলেকশন স্টাইল */
+        .item:focus, .item.active {
+            border-color: #3d85c6;
+            transform: scale(1.1);
+            background: rgba(61, 133, 198, 0.2);
+            box-shadow: 0 0 50px rgba(61, 133, 198, 0.6);
+            z-index: 10;
+        }
+        
+        .item img { width: 65px; margin-bottom: 12px; pointer-events: none; }
+
+        /* ইউজার ইনফো (Supabase থেকে আসবে) */
+        .user-info {
+            position: absolute; top: 40px; right: 50px;
+            text-align: right; opacity: 0.8;
+        }
+
+        .ip-info {
+            position: absolute; bottom: 20px; right: 30px;
+            font-size: 14px; opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 style="position: absolute; top: 40px; left: 50px; opacity: 0.6; letter-spacing: 5px; font-weight: 300;">GEMINI OS 3.0</h2>
+    
+    <div class="user-info" id="user-display">
+        <span id="welcome-msg">Connecting...</span>
+    </div>
+
+    <h1>Hi, Select an App</h1>
+    
+    <div class="menu" id="app-grid">
+        <button class="item" id="btn-0" onclick="launch('/launch/youtube')">
+            <img src="https://img.icons8.com/color/144/youtube-play.png"> YouTube
+        </button>
+        <button class="item" id="btn-1" onclick="launch('/launch/netflix')">
+            <img src="https://img.icons8.com/color/144/netflix.png"> Netflix
+        </button>
+        <button class="item" id="btn-2" onclick="launch('/launch/mxplayer')">
+            <img src="https://img.icons8.com/color/144/vlc.png"> Media Player
+        </button>
+        <button class="item" id="btn-3" onclick="launch('/launch/hotstar')">
+            <img src="https://img.icons8.com/color/144/disney-plus.png"> Hotstar
+        </button>
+        <button class="item" id="btn-4" onclick="launch('/launch/jiotv')">
+            <img src="https://img.icons8.com/color/144/tv-show.png"> Jio TV
+        </button>
+        <button class="item" id="btn-5" onclick="launch('/launch/ckart')">
+            <img src="https://img.icons8.com/color/144/shopping-cart.png"> C-Kart
+        </button>
+        <button class="item" id="btn-6" onclick="launch('/tv')">
+            <img src="https://img.icons8.com/fluency/144/monitor.png"> Live TV
+        </button>
+        <button class="item" id="btn-7" onclick="launch('/iptv')">
+            <img src="https://img.icons8.com/fluency/144/antenna.png"> IPTV
+        </button>
+    </div>
+
+    <div class="ip-info">Dashboard Version: 3.0.4 | Cloud Sync Active</div>
+
+    <script>
+        const buttons = document.querySelectorAll('.item');
+        let index = 0;
+        const columns = 4; // প্রতি লাইনে ৪টি আইকন
+
+        // ১. ইউজার ডাটা দেখানো (localStorage থেকে)
+        window.onload = function() {
+            const mobile = localStorage.getItem("user_mobile");
+            if(mobile) {
+                document.getElementById('welcome-msg').innerText = "User: " + mobile;
+            } else {
+                document.getElementById('welcome-msg').innerText = "Guest Mode";
+            }
+            setTimeout(updateFocus, 500);
+        };
+
+        function launch(url) {
+            window.location.href = url;
+        }
+
+        function updateFocus() {
+            buttons.forEach((btn, i) => {
+                if (i === index) {
+                    btn.classList.add('active');
+                    btn.focus();
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // ২. কিবোর্ড ও রিমোট নেভিগেশন (৪ কলাম লজিক)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                index = (index + 1) % buttons.length;
+                updateFocus();
+            } else if (e.key === 'ArrowLeft') {
+                index = (index - 1 + buttons.length) % buttons.length;
+                updateFocus();
+            } else if (e.key === 'ArrowUp') {
+                if (index >= columns) index -= columns;
+                updateFocus();
+            } else if (e.key === 'ArrowDown') {
+                if (index + columns < buttons.length) index += columns;
+                else index = buttons.length - 1;
+                updateFocus();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                buttons[index].click();
+            }
+        });
+
+        // ৩. মাউস ওভার সাপোর্ট
+        buttons.forEach((btn, i) => {
+            btn.addEventListener('mouseenter', () => {
+                index = i;
+                updateFocus();
+            });
+        });
+
+        window.onfocus = function() { updateFocus(); };
+    </script>
+</body>
+</html>
