@@ -40,14 +40,15 @@
             border-radius: 30px;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            font-size: 18px; border: 3px solid transparent;
+            font-size: 18px; border: 4px solid transparent;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             color: white; cursor: pointer;
             outline: none;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-decoration: none;
         }
 
-        /* রিমোট এবং কিবোর্ড সিলেকশন স্টাইল */
+        /* সিলেকশন এবং হোভার ইফেক্ট */
         .item:focus, .item.active {
             border-color: #3d85c6;
             transform: scale(1.1);
@@ -58,7 +59,6 @@
         
         .item img { width: 65px; margin-bottom: 12px; pointer-events: none; }
 
-        /* ইউজার ইনফো (Supabase থেকে আসবে) */
         .user-info {
             position: absolute; top: 40px; right: 50px;
             text-align: right; opacity: 0.8;
@@ -81,54 +81,55 @@
     <h1>Hi, Select an App</h1>
     
     <div class="menu" id="app-grid">
-        <button class="item" id="btn-0" onclick="launch('/launch/youtube')">
+        <button class="item" id="btn-0" onclick="launch('https://youtube.com')">
             <img src="https://img.icons8.com/color/144/youtube-play.png"> YouTube
         </button>
-        <button class="item" id="btn-1" onclick="launch('/launch/netflix')">
+        <button class="item" id="btn-1" onclick="launch('https://netflix.com')">
             <img src="https://img.icons8.com/color/144/netflix.png"> Netflix
         </button>
-        <button class="item" id="btn-2" onclick="launch('/launch/mxplayer')">
+        <button class="item" id="btn-2" onclick="launch('tv.html')">
             <img src="https://img.icons8.com/color/144/vlc.png"> Media Player
         </button>
-        <button class="item" id="btn-3" onclick="launch('/launch/hotstar')">
+        <button class="item" id="btn-3" onclick="launch('https://hotstar.com')">
             <img src="https://img.icons8.com/color/144/disney-plus.png"> Hotstar
         </button>
-        <button class="item" id="btn-4" onclick="launch('/launch/jiotv')">
+        <button class="item" id="btn-4" onclick="launch('iptv.html')">
             <img src="https://img.icons8.com/color/144/tv-show.png"> Jio TV
         </button>
-        <button class="item" id="btn-5" onclick="launch('/launch/ckart')">
+        <button class="item" id="btn-5" onclick="launch('iptv.html')">
             <img src="https://img.icons8.com/color/144/shopping-cart.png"> C-Kart
         </button>
-        <button class="item" id="btn-6" onclick="launch('/tv')">
+        <button class="item" id="btn-6" onclick="launch('iptv.html')">
             <img src="https://img.icons8.com/fluency/144/monitor.png"> Live TV
         </button>
-        <button class="item" id="btn-7" onclick="launch('/iptv')">
+        <button class="item" id="btn-7" onclick="launch('iptv.html')">
             <img src="https://img.icons8.com/fluency/144/antenna.png"> IPTV
         </button>
     </div>
 
-    <div class="ip-info">Dashboard Version: 3.0.4 | Cloud Sync Active</div>
+    <div class="ip-info">Dashboard Version: 3.0.4 | GitHub Live Active</div>
 
     <script>
         const buttons = document.querySelectorAll('.item');
         let index = 0;
-        const columns = 4; // প্রতি লাইনে ৪টি আইকন
+        const columns = 4;
 
-        // ১. ইউজার ডাটা দেখানো (localStorage থেকে)
+        // ১. ইউজার ইনফো লোড করা
         window.onload = function() {
             const mobile = localStorage.getItem("user_mobile");
-            if(mobile) {
-                document.getElementById('welcome-msg').innerText = "User: " + mobile;
-            } else {
-                document.getElementById('welcome-msg').innerText = "Guest Mode";
-            }
-            setTimeout(updateFocus, 500);
+            document.getElementById('welcome-msg').innerText = mobile ? "User: " + mobile : "Guest Mode";
+            
+            // কিবোর্ড ফোকাস ইনিশিয়াল করা
+            setTimeout(() => {
+                updateFocus();
+            }, 500);
         };
 
         function launch(url) {
             window.location.href = url;
         }
 
+        // ২. ফোকাস আপডেট ফাংশন
         function updateFocus() {
             buttons.forEach((btn, i) => {
                 if (i === index) {
@@ -140,28 +141,30 @@
             });
         }
 
-        // ২. কিবোর্ড ও রিমোট নেভিগেশন (৪ কলাম লজিক)
+        // ৩. উন্নত কিবোর্ড এবং রিমোট নেভিগেশন লজিক
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight') {
                 index = (index + 1) % buttons.length;
-                updateFocus();
             } else if (e.key === 'ArrowLeft') {
                 index = (index - 1 + buttons.length) % buttons.length;
-                updateFocus();
             } else if (e.key === 'ArrowUp') {
-                if (index >= columns) index -= columns;
-                updateFocus();
+                if (index >= columns) {
+                    index -= columns;
+                }
             } else if (e.key === 'ArrowDown') {
-                if (index + columns < buttons.length) index += columns;
-                else index = buttons.length - 1;
-                updateFocus();
+                if (index + columns < buttons.length) {
+                    index += columns;
+                } else {
+                    index = buttons.length - 1; 
+                }
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 buttons[index].click();
             }
+            updateFocus();
         });
 
-        // ৩. মাউস ওভার সাপোর্ট
+        // ৪. মাউস দিয়ে হোভার করলে যেন ইনডেক্স ঠিক থাকে
         buttons.forEach((btn, i) => {
             btn.addEventListener('mouseenter', () => {
                 index = i;
