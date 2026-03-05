@@ -10,35 +10,37 @@
 
     <style>
         :root {
-            --bg: #0f0f0f;
-            --panel: #1e1e1e;
+            --bg: #0a0a0a;
+            --panel: #1a1a1a;
             --accent: #3d85c6;
             --red: #ff3b30;
             --yt: #ff0000;
             --live: #4caf50;
+            --text: #ffffff;
         }
 
         body {
             background-color: var(--bg);
-            color: white;
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            color: var(--text);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             display: flex;
             justify-content: center;
-            height: 100vh;
-            overflow-y: auto; /* নম্বর প্যাড যুক্ত হওয়ায় স্ক্রল এনাবল করা হয়েছে */
+            min-height: 100vh;
+            overflow-x: hidden;
             touch-action: manipulation;
         }
 
         .remote-app {
             width: 100%;
             max-width: 400px;
-            background: linear-gradient(180deg, #1a1a1a 0%, #050505 100%);
+            background: linear-gradient(180deg, #161616 0%, #000000 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: 25px 20px;
             box-sizing: border-box;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
 
         .header {
@@ -46,94 +48,116 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        .brand {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
         }
 
         .power-btn {
-            width: 50px; height: 50px;
+            width: 55px; height: 55px;
             background: var(--red);
             border-radius: 50%; border: none;
-            color: white; font-size: 20px;
-            box-shadow: 0 0 15px rgba(255, 59, 48, 0.4);
+            color: white; font-size: 24px;
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.4);
+            cursor: pointer;
         }
 
-        /* নম্বর প্যাড স্টাইল */
+        /* Number Pad */
         .numpad {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 25px;
             background: rgba(255,255,255,0.03);
             padding: 15px;
-            border-radius: 20px;
+            border-radius: 25px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .num-btn {
-            width: 60px; height: 45px;
+            width: 65px; height: 50px;
             background: var(--panel);
             border: 1px solid #333;
-            border-radius: 10px;
+            border-radius: 12px;
             color: white;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
+            transition: 0.1s;
         }
-        .num-btn:active { background: var(--accent); }
+        .num-btn:active { background: var(--accent); transform: scale(0.9); }
 
-        /* অ্যাপ বাটন */
+        /* Shortcuts */
         .app-shortcuts {
-            display: flex; gap: 10px; margin-bottom: 20px;
+            display: flex; gap: 10px; margin-bottom: 25px; width: 100%;
         }
         .app-btn {
-            padding: 8px 15px; border-radius: 10px;
+            flex: 1;
+            padding: 12px 5px; border-radius: 12px;
             border: none; color: white; font-weight: bold; font-size: 11px;
+            text-transform: uppercase; cursor: pointer;
         }
 
-        /* নেভিগেশন (D-Pad) */
+        /* D-Pad */
         .dpad-outer {
-            width: 220px; height: 220px;
-            background: #222; border-radius: 50%;
+            width: 240px; height: 240px;
+            background: #1e1e1e; border-radius: 50%;
             position: relative; display: flex;
             align-items: center; justify-content: center;
-            border: 4px solid #2a2a2a; margin: 10px 0;
+            border: 6px solid #2a2a2a; margin: 15px 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
         }
         .dpad-btn {
             position: absolute; background: none;
-            border: none; color: #aaa; font-size: 30px;
+            border: none; color: #888; font-size: 35px;
+            cursor: pointer; padding: 10px;
         }
         .up { top: 5px; } .down { bottom: 5px; } .left { left: 5px; } .right { right: 5px; }
         .ok-btn {
-            width: 80px; height: 80px;
-            background: #111; border-radius: 50%;
-            border: 2px solid #444; color: white; font-weight: bold;
+            width: 90px; height: 90px;
+            background: linear-gradient(145deg, #222, #111);
+            border-radius: 50%;
+            border: 2px solid #444; color: white; 
+            font-weight: bold; font-size: 18px;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
         }
+        .ok-btn:active { background: var(--accent); }
 
-        /* একশন গ্রিড */
+        /* Actions */
         .grid {
             display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 12px; width: 100%; margin-top: 20px;
+            gap: 15px; width: 100%; margin-top: 25px;
         }
         .btn-action {
             background: var(--panel); border: 1px solid #333;
-            border-radius: 12px; height: 50px; color: white; font-size: 12px;
+            border-radius: 15px; height: 55px; color: white; font-size: 12px;
+            font-weight: bold; cursor: pointer;
         }
 
-        /* ভলিউম ও চ্যানেল */
+        /* Pill Controls */
         .pill-row {
-            display: flex; gap: 30px; margin-top: 20px;
+            display: flex; gap: 40px; margin-top: 30px;
         }
         .pill {
-            background: var(--panel); width: 65px; height: 120px;
-            border-radius: 30px; display: flex; flex-direction: column;
+            background: var(--panel); width: 70px; height: 140px;
+            border-radius: 35px; display: flex; flex-direction: column;
             justify-content: space-between; align-items: center;
-            padding: 8px 0; border: 1px solid #333;
+            padding: 12px 0; border: 1px solid #333;
         }
-        .pill-b { background: none; border: none; color: white; font-size: 20px; }
+        .pill-b { background: none; border: none; color: white; font-size: 24px; width: 100%; cursor: pointer; }
+        .pill-b:active { color: var(--accent); }
 
         .mic-btn {
-            margin: 20px 0; width: 60px; height: 60px;
+            margin: 30px 0; width: 75px; height: 75px;
             background: var(--accent); border-radius: 50%;
-            border: none; color: white; font-size: 24px;
-            box-shadow: 0 0 15px rgba(61, 133, 198, 0.5);
+            border: none; color: white; font-size: 30px;
+            box-shadow: 0 10px 20px rgba(61, 133, 198, 0.4);
+            cursor: pointer;
         }
     </style>
 </head>
@@ -141,7 +165,7 @@
 
     <div class="remote-app">
         <div class="header">
-            <span style="color: var(--accent); font-weight: bold; font-size: 12px;">GEMINI OS 3.0</span>
+            <span class="brand">Gemini OS Pro</span>
             <button class="power-btn" onclick="send('power')">⏻</button>
         </div>
 
@@ -155,15 +179,15 @@
             <button class="num-btn" onclick="send('7')">7</button>
             <button class="num-btn" onclick="send('8')">8</button>
             <button class="num-btn" onclick="send('9')">9</button>
-            <div style="width:60px"></div>
+            <div style="width:65px"></div>
             <button class="num-btn" onclick="send('0')">0</button>
-            <div style="width:60px"></div>
+            <div style="width:65px"></div>
         </div>
 
         <div class="app-shortcuts">
             <button class="app-btn" style="background: var(--yt)" onclick="send('launch_yt')">YouTube</button>
             <button class="app-btn" style="background: var(--live)" onclick="send('launch_live')">Live TV</button>
-            <button class="app-btn" style="background: #444" onclick="send('home')">Dashboard</button>
+            <button class="app-btn" style="background: #333" onclick="send('home')">Home</button>
         </div>
 
         <div class="dpad-outer">
@@ -176,19 +200,19 @@
 
         <div class="grid">
             <button class="btn-action" onclick="send('back')">BACK</button>
-            <button class="btn-action" onclick="send('home')">HOME</button>
-            <button class="btn-action" onclick="send('play_pause')">P/P</button>
+            <button class="btn-action" onclick="send('home')">DASHBOARD</button>
+            <button class="btn-action" onclick="send('play_pause')">PLAY/PAUSE</button>
         </div>
 
         <div class="pill-row">
             <div class="pill">
                 <button class="pill-b" onclick="send('vol_up')">+</button>
-                <span style="font-size: 9px; color: #666;">VOL</span>
+                <span style="font-size: 10px; color: #777; font-weight: bold;">VOL</span>
                 <button class="pill-b" onclick="send('vol_down')">−</button>
             </div>
             <div class="pill">
                 <button class="pill-b" onclick="send('ch_up')">∧</button>
-                <span style="font-size: 9px; color: #666;">CH</span>
+                <span style="font-size: 10px; color: #777; font-weight: bold;">CH</span>
                 <button class="pill-b" onclick="send('ch_down')">∨</button>
             </div>
         </div>
@@ -197,31 +221,49 @@
     </div>
 
     <script>
-        // আপনার config.js থেকে ডেটা নিয়ে ইনিশিয়ালাইজ করুন
-        const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+        // Initialize Supabase safely
+        let supabaseClient;
+        
+        try {
+            supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+        } catch (e) {
+            console.error("Configuration Missing!");
+        }
 
         async function send(cmd) {
-            // ভাইব্রেশন ফিডব্যাক
-            if (navigator.vibrate) navigator.vibrate(40);
+            // Haptic Feedback
+            if (navigator.vibrate) navigator.vibrate(45);
             
-            console.log("Sending Command:", cmd);
+            console.log("Action:", cmd);
 
-            // সুপাবেস ডাটাবেসে কমান্ড পাঠানো
+            if (!supabaseClient) {
+                alert("Supabase not connected. Check config.js");
+                return;
+            }
+
             const { error } = await supabaseClient
                 .from('remote_commands')
-                .insert([{ command: cmd, created_at: new Date() }]);
+                .insert([{ command: cmd, created_at: new Date().toISOString() }]);
             
             if (error) {
-                console.error("Supabase Error:", error.message);
-                alert("Connection Error!");
+                console.error("Error:", error.message);
             }
         }
 
         function startVoice() {
-            if (navigator.vibrate) navigator.vibrate(80);
-            const q = prompt("What to search on TV?");
-            if(q) send('search:' + q);
+            if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+            const q = prompt("Voice Search: What do you want to watch?");
+            if(q && q.trim() !== "") {
+                send('search:' + q.trim());
+            }
         }
+
+        // Prevent Context Menu on long press for a better app feel
+        window.oncontextmenu = function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+        };
     </script>
 </body>
 </html>
