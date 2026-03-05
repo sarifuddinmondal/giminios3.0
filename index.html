@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini OS 3.0 - Powered by Sarifuddin</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="config.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #000;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* স্যামসাং স্টাইল বুট অ্যানিমেশন */
+        #boot-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .company-logo {
+            width: 120px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+            animation: zoomFade 2.5s ease-in-out forwards;
+        }
+
+        .os-name {
+            font-size: 45px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            background: linear-gradient(to right, #fff 20%, #444 40%, #444 60%, #fff 80%);
+            background-size: 200% auto;
+            color: #fff;
+            background-clip: text;
+            text-fill-color: transparent;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+        }
+
+        /* লগইন ইন্টারফেস */
+        #login-section {
+            display: none;
+            width: 100%;
+            max-width: 450px;
+            padding: 40px;
+            text-align: center;
+            animation: slideUp 1s ease-out;
+        }
+
+        .login-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 40px;
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 18px;
+            margin: 25px 0;
+            border-radius: 15px;
+            border: 1px solid #333;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 20px;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus { border-color: #3d85c6; box-shadow: 0 0 15px rgba(61, 133, 198, 0.3); }
+
+        .btn-login {
+            width: 100%;
+            padding: 18px;
+            border-radius: 15px;
+            border: none;
+            background: #fff;
+            color: #000;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-login:hover { background: #3d85c6; color: white; }
+
+        /* অ্যানিমেশন কি-ফ্রেমস */
+        @keyframes zoomFade {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .powered {
+            position: absolute;
+            bottom: 40px;
+            font-size: 12px;
+            letter-spacing: 2px;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="boot-screen">
+        <img src="https://img.icons8.com/fluency/144/layers.png" class="company-logo" id="logoImg">
+        <h1 class="os-name">GEMINI OS</h1>
+        <div class="powered">POWERED BY SARIFUDDIN</div>
+    </div>
+
+    <div id="login-section">
+        <div class="login-box">
+            <h2 style="font-weight: 300; letter-spacing: 2px;">WELCOME</h2>
+            <p style="opacity: 0.5; font-size: 14px; margin-top: 5px;">Login to continue to version 3.0</p>
+            
+            <input type="tel" id="mobileInput" placeholder="Enter Mobile Number" maxlength="11">
+            <button class="btn-login" id="loginBtn" onclick="doLogin()">START ENGINE</button>
+            <p id="status" style="margin-top: 15px; font-size: 13px; color: #3d85c6; display: none;">Syncing with Cloud OS...</p>
+        </div>
+    </div>
+
+    <script>
+        // পেজ লোড হওয়ার সময় চেক
+        window.onload = function() {
+            const userSession = localStorage.getItem("gemini_active");
+
+            // ৫ সেকেন্ড বুট অ্যানিমেশন
+            setTimeout(() => {
+                if (userSession) {
+                    // যদি আগেই লগইন থাকে, সরাসরি ড্যাশবোর্ডে পাঠাবে
+                    window.location.href = "giminios.html";
+                } else {
+                    // নাহলে লগইন সেকশন দেখাবে
+                    document.getElementById('boot-screen').style.display = "none";
+                    document.getElementById('login-section').style.display = "block";
+                }
+            }, 5000); 
+        };
+
+        // লগইন ফাংশন
+        async function doLogin() {
+            const mobile = document.getElementById('mobileInput').value;
+            const btn = document.getElementById('loginBtn');
+            const status = document.getElementById('status');
+
+            if (mobile.length < 10) {
+                alert("Please enter a valid mobile number!");
+                return;
+            }
+
+            btn.innerText = "CONNECTING...";
+            btn.disabled = true;
+            status.style.display = "block";
+
+            try {
+                // config.js থেকে আসা '_supabase' ব্যবহার করে ডাটা সেভ
+                const { data, error } = await _supabase
+                    .from('users')
+                    .insert([{ mobile_number: mobile, login_time: new Date() }]);
+
+                if (error) throw error;
+
+                // সেশন সেভ করা
+                localStorage.setItem("gemini_active", "true");
+                localStorage.setItem("user_mobile", mobile);
+
+                // ড্যাশবোর্ড লোড (পাইথন সার্ভারের রুট অনুযায়ী)
+                window.location.href = "giminios.html";
+
+            } catch (err) {
+                console.error("Supabase Error:", err.message);
+                // ডাটাবেস এরর দিলেও অফলাইনে বাইপাস করার সুবিধা (ডেভেলপমেন্টের জন্য)
+                localStorage.setItem("gemini_active", "true");
+                window.location.href = "giminios.html";
+            }
+        }
+    </script>
+</body>
+</html>
