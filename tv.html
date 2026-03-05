@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini OS - Live Player</title>
+    <title>Gemini OS - Advanced Player</title>
     
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script src="config.js"></script>
 
     <style>
@@ -19,132 +17,160 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
-        /* প্লেয়ার ফুল স্ক্রিন - টিভি মোডের জন্য */
-        .video-js {
-            width: 100vw; height: 100vh;
+        .video-js { width: 100vw; height: 100vh; }
+
+        /* প্লেলিস্ট ড্রয়ার (বাম দিকে থাকবে) */
+        #playlist-drawer {
+            position: absolute; top: 0; left: -350px;
+            width: 320px; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px);
+            z-index: 20; transition: 0.5s;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            overflow-y: auto;
+            padding: 20px 10px;
         }
 
-        /* উপরের ইনফো বার (অটো হাইড হবে) */
+        #playlist-drawer.open { left: 0; }
+
+        .ch-item {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #ccc;
+            transition: 0.2s;
+        }
+
+        .ch-item:hover, .ch-item:focus {
+            background: #3d85c6; color: white; outline: none;
+        }
+
         .player-info {
             position: absolute; top: 30px; left: 40px;
             z-index: 10; color: white;
             background: rgba(0,0,0,0.6);
             padding: 15px 30px; border-radius: 20px;
             backdrop-filter: blur(15px);
-            border-left: 6px solid #3d85c6;
-            opacity: 0; transition: opacity 0.8s ease-in-out;
-            pointer-events: none;
+            opacity: 0; transition: 0.8s; pointer-events: none;
         }
 
-        /* মাউস বা রিমোট অ্যাক্টিভিটিতে শো করবে */
-        .show-ui .player-info, .show-ui .back-btn { opacity: 1; }
+        .show-ui .player-info, .show-ui .back-btn, .show-ui #list-toggle { opacity: 1; }
 
-        .back-btn {
-            position: absolute; top: 30px; right: 40px;
-            z-index: 10; background: rgba(255,255,255,0.1);
+        .back-btn, #list-toggle {
+            position: absolute; top: 30px; z-index: 21;
+            background: rgba(255,255,255,0.1);
             color: white; border: 2px solid rgba(255,255,255,0.2); 
             padding: 12px 25px; border-radius: 50px; 
-            cursor: pointer; font-weight: bold; backdrop-filter: blur(10px);
-            opacity: 0; transition: opacity 0.8s ease-in-out;
-            outline: none;
+            cursor: pointer; font-weight: bold; opacity: 0; transition: 0.5s;
         }
-        
-        .back-btn:focus { background: #ff3b30; border-color: white; transform: scale(1.1); }
-        .back-btn:hover { background: rgba(255,0,0,0.6); }
 
-        /* কাস্টম লোডিং স্পিনার */
-        .vjs-loading-spinner { border-radius: 15px !important; }
+        .back-btn { right: 40px; }
+        #list-toggle { left: 40px; }
+
+        .loading-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: black; z-index: 100; display: flex;
+            align-items: center; justify-content: center; color: #3d85c6;
+        }
     </style>
 </head>
 <body class="show-ui">
 
-    <div class="player-info">
-        <div id="ch-name" style="font-size: 28px; font-weight: bold; letter-spacing: 1px;">Loading Channel...</div>
-        <div style="font-size: 14px; opacity: 0.6; margin-top: 5px;">
-            <span id="user-tag">Syncing...</span> | Gemini OS Cloud Stream
-        </div>
+    <div id="loader" class="loading-overlay">Parsing Playlist... Please Wait</div>
+
+    <button id="list-toggle" onclick="togglePlaylist()">☰ Channel List</button>
+    <button class="back-btn" id="closeBtn" onclick="goBack()">✕ Close</button>
+
+    <div id="playlist-drawer">
+        <h3 style="color: #3d85c6; margin-left: 10px;">Channels</h3>
+        <div id="channel-container"></div>
     </div>
 
-    <button class="back-btn" id="closeBtn" onclick="goBack()">✕ Close Player</button>
+    <div class="player-info">
+        <div id="ch-name" style="font-size: 24px; font-weight: bold;">Loading...</div>
+        <div id="user-tag" style="font-size: 12px; opacity: 0.6;">Syncing...</div>
+    </div>
 
-    <video
-        id="gemini-live-player"
-        class="video-js vjs-big-play-centered vjs-fluid"
-        controls
-        preload="auto"
-        autoplay
-        data-setup='{"fluid": false}'>
-    </video>
+    <video id="gemini-live-player" class="video-js vjs-big-play-centered" controls autoplay preload="auto"></video>
 
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 
     <script>
         const params = new URLSearchParams(window.location.search);
-        const videoUrl = params.get('url');
-        const videoName = params.get('name') || "Unknown Channel";
+        const sourceUrl = params.get('url');
         const player = videojs('gemini-live-player');
 
-        // ১. ইউজার ইনফো সেট করা
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('ch-name').innerText = videoName;
-            const mobile = localStorage.getItem("user_mobile") || "Guest";
-            document.getElementById('user-tag').innerText = "User: " + mobile;
-            
-            // ৩ সেকেন্ড পর UI হাইড করে দেওয়া (সিনেমাটিক অভিজ্ঞতা)
-            hideUITimer();
-        });
+        async function init() {
+            if (!sourceUrl) return goBack();
 
-        // ২. প্লেয়ার সোর্স সেট করা
-        if (videoUrl) {
+            // যদি এটি একটি M3U প্লেলিস্ট হয়
+            if (sourceUrl.endsWith('.m3u') || sourceUrl.includes('m3u')) {
+                await parseM3U(sourceUrl);
+                document.getElementById('loader').style.display = 'none';
+                togglePlaylist(); // প্লেলিস্টটি অটো ওপেন হবে
+            } else {
+                playStream(sourceUrl, params.get('name') || "Live TV");
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // M3U Parser: লিঙ্ক থেকে চ্যানেলের নাম এবং ইউআরএল বের করবে
+        async function parseM3U(url) {
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                const lines = text.split('\n');
+                const container = document.getElementById('channel-container');
+                
+                let currentName = "";
+
+                lines.forEach(line => {
+                    if (line.startsWith('#EXTINF:')) {
+                        currentName = line.split(',')[1] || "Unnamed Channel";
+                    } else if (line.startsWith('http')) {
+                        const channelUrl = line.trim();
+                        const btn = document.createElement('div');
+                        btn.className = 'ch-item';
+                        btn.innerText = currentName;
+                        btn.tabIndex = 0;
+                        btn.onclick = () => {
+                            playStream(channelUrl, btn.innerText);
+                            togglePlaylist();
+                        };
+                        container.appendChild(btn);
+                    }
+                });
+            } catch (e) {
+                alert("Could not load playlist. Check internet or URL.");
+                goBack();
+            }
+        }
+
+        function playStream(url, name) {
+            document.getElementById('ch-name').innerText = name;
             player.src({
-                src: videoUrl,
-                type: (videoUrl.includes('m3u8')) ? 'application/x-mpegURL' : 'video/mp4'
+                src: url,
+                type: (url.includes('m3u8')) ? 'application/x-mpegURL' : 'video/mp4'
             });
             player.play();
         }
 
-        function goBack() {
-            // আপনার ড্যাশবোর্ড বা টিভি লিস্টে ফিরে যাওয়া
-            window.location.href = 'giminios.html'; 
+        function togglePlaylist() {
+            document.getElementById('playlist-drawer').classList.toggle('open');
         }
 
-        // ৩. উন্নত রিমোট কন্ট্রোল লজিক
+        function goBack() { window.location.href = 'giminios.html'; }
+
+        // রিমোট কন্ট্রোল সাপোর্ট
         document.addEventListener('keydown', (e) => {
-            showUI(); // যেকোনো বাটন চাপলে UI দেখাবে
-
-            if (e.key === 'Enter' || e.key === ' ') {
-                if (document.activeElement.id === 'closeBtn') {
-                    goBack();
-                } else {
-                    player.paused() ? player.play() : player.pause();
-                }
-            }
-            
-            if (e.key === 'Backspace' || e.key === 'Escape') {
-                goBack();
-            }
-
-            // ভলিউম কন্ট্রোল (টিভি রিমোটের জন্য)
-            if (e.key === 'ArrowUp') player.volume(player.volume() + 0.1);
-            if (e.key === 'ArrowDown') player.volume(player.volume() - 0.1);
+            if (e.key === 'm' || e.key === 'Menu') togglePlaylist();
+            if (e.key === 'Backspace') goBack();
         });
 
-        // ৪. অটো UI হাইড লজিক
-        let uiTimer;
-        function showUI() {
-            document.body.classList.add('show-ui');
-            clearTimeout(uiTimer);
-            hideUITimer();
-        }
-
-        function hideUITimer() {
-            uiTimer = setTimeout(() => {
-                document.body.classList.remove('show-ui');
-            }, 5000);
-        }
-
-        // মাউস নড়ালেও UI শো করবে
-        document.addEventListener('mousemove', showUI);
+        init();
     </script>
 </body>
 </html>
