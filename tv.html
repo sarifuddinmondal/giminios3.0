@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini OS - Live Player</title>
+    
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="config.js"></script>
+
+    <style>
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            background: black; overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* প্লেয়ার ফুল স্ক্রিন - টিভি মোডের জন্য */
+        .video-js {
+            width: 100vw; height: 100vh;
+        }
+
+        /* উপরের ইনফো বার (অটো হাইড হবে) */
+        .player-info {
+            position: absolute; top: 30px; left: 40px;
+            z-index: 10; color: white;
+            background: rgba(0,0,0,0.6);
+            padding: 15px 30px; border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border-left: 6px solid #3d85c6;
+            opacity: 0; transition: opacity 0.8s ease-in-out;
+            pointer-events: none;
+        }
+
+        /* মাউস বা রিমোট অ্যাক্টিভিটিতে শো করবে */
+        .show-ui .player-info, .show-ui .back-btn { opacity: 1; }
+
+        .back-btn {
+            position: absolute; top: 30px; right: 40px;
+            z-index: 10; background: rgba(255,255,255,0.1);
+            color: white; border: 2px solid rgba(255,255,255,0.2); 
+            padding: 12px 25px; border-radius: 50px; 
+            cursor: pointer; font-weight: bold; backdrop-filter: blur(10px);
+            opacity: 0; transition: opacity 0.8s ease-in-out;
+            outline: none;
+        }
+        
+        .back-btn:focus { background: #ff3b30; border-color: white; transform: scale(1.1); }
+        .back-btn:hover { background: rgba(255,0,0,0.6); }
+
+        /* কাস্টম লোডিং স্পিনার */
+        .vjs-loading-spinner { border-radius: 15px !important; }
+    </style>
+</head>
+<body class="show-ui">
+
+    <div class="player-info">
+        <div id="ch-name" style="font-size: 28px; font-weight: bold; letter-spacing: 1px;">Loading Channel...</div>
+        <div style="font-size: 14px; opacity: 0.6; margin-top: 5px;">
+            <span id="user-tag">Syncing...</span> | Gemini OS Cloud Stream
+        </div>
+    </div>
+
+    <button class="back-btn" id="closeBtn" onclick="goBack()">✕ Close Player</button>
+
+    <video
+        id="gemini-live-player"
+        class="video-js vjs-big-play-centered vjs-fluid"
+        controls
+        preload="auto"
+        autoplay
+        data-setup='{"fluid": false}'>
+    </video>
+
+    <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const videoUrl = params.get('url');
+        const videoName = params.get('name') || "Unknown Channel";
+        const player = videojs('gemini-live-player');
+
+        // ১. ইউজার ইনফো সেট করা
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('ch-name').innerText = videoName;
+            const mobile = localStorage.getItem("user_mobile") || "Guest";
+            document.getElementById('user-tag').innerText = "User: " + mobile;
+            
+            // ৩ সেকেন্ড পর UI হাইড করে দেওয়া (সিনেমাটিক অভিজ্ঞতা)
+            hideUITimer();
+        });
+
+        // ২. প্লেয়ার সোর্স সেট করা
+        if (videoUrl) {
+            player.src({
+                src: videoUrl,
+                type: (videoUrl.includes('m3u8')) ? 'application/x-mpegURL' : 'video/mp4'
+            });
+            player.play();
+        }
+
+        function goBack() {
+            // আপনার ড্যাশবোর্ড বা টিভি লিস্টে ফিরে যাওয়া
+            window.location.href = 'giminios.html'; 
+        }
+
+        // ৩. উন্নত রিমোট কন্ট্রোল লজিক
+        document.addEventListener('keydown', (e) => {
+            showUI(); // যেকোনো বাটন চাপলে UI দেখাবে
+
+            if (e.key === 'Enter' || e.key === ' ') {
+                if (document.activeElement.id === 'closeBtn') {
+                    goBack();
+                } else {
+                    player.paused() ? player.play() : player.pause();
+                }
+            }
+            
+            if (e.key === 'Backspace' || e.key === 'Escape') {
+                goBack();
+            }
+
+            // ভলিউম কন্ট্রোল (টিভি রিমোটের জন্য)
+            if (e.key === 'ArrowUp') player.volume(player.volume() + 0.1);
+            if (e.key === 'ArrowDown') player.volume(player.volume() - 0.1);
+        });
+
+        // ৪. অটো UI হাইড লজিক
+        let uiTimer;
+        function showUI() {
+            document.body.classList.add('show-ui');
+            clearTimeout(uiTimer);
+            hideUITimer();
+        }
+
+        function hideUITimer() {
+            uiTimer = setTimeout(() => {
+                document.body.classList.remove('show-ui');
+            }, 5000);
+        }
+
+        // মাউস নড়ালেও UI শো করবে
+        document.addEventListener('mousemove', showUI);
+    </script>
+</body>
+</html>
