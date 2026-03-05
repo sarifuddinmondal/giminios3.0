@@ -3,226 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gemini OS - Smart Remote</title>
+    <title>Gemini Remote - Mobile</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+
     <style>
         :root {
-            --bg-color: #1a1a1a;
-            --remote-bg: #2d2d2d;
+            --bg-dark: #0f0f0f;
+            --panel-bg: #1e1e1e;
             --accent-blue: #3d85c6;
             --danger-red: #ff3b30;
-            --btn-gray: #444;
+            --glass: rgba(255, 255, 255, 0.05);
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-dark);
             color: white;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
+            width: 100vw;
             overflow: hidden;
-            touch-action: manipulation;
+            touch-action: none; /* জুম বন্ধ রাখার জন্য */
         }
 
-        .remote-container {
-            background: var(--remote-bg);
-            width: 280px;
-            height: 600px;
-            border-radius: 50px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 2px 5px rgba(255,255,255,0.1);
+        .remote-app {
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 30px 10px;
-            border: 2px solid #333;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
         }
 
-        .brand {
-            font-size: 12px;
-            letter-spacing: 4px;
-            opacity: 0.5;
-            margin-bottom: 20px;
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 0 10px;
+        }
+
+        .brand-logo {
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: var(--accent-blue);
         }
 
         /* পাওয়ার বাটন */
         .power-btn {
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             background: var(--danger-red);
             border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 22px;
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.4);
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            border: none;
-            cursor: pointer;
-            margin-bottom: 30px;
         }
 
-        /* নেভিগেশন প্যাড (D-Pad) */
-        .dpad {
-            position: relative;
-            width: 180px;
-            height: 180px;
-            background: #222;
+        /* নেভিগেশন কন্ট্রোল */
+        .dpad-outer {
+            width: 260px;
+            height: 260px;
+            background: #252525;
             border-radius: 50%;
-            display: grid;
-            grid-template-areas: 
-                ". up ."
-                "left ok right"
-                ". down .";
+            position: relative;
+            display: flex;
             align-items: center;
-            justify-items: center;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            justify-content: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            margin: 20px 0;
         }
 
-        .d-btn {
+        .dpad-btn {
+            position: absolute;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 30px;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dpad-btn:active { color: var(--accent-blue); }
+
+        .up    { top: 5px; }
+        .down  { bottom: 5px; }
+        .left  { left: 5px; }
+        .right { right: 5px; }
+
+        .ok-btn {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+            border-radius: 50%;
+            border: 2px solid #333;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            z-index: 2;
+        }
+        .ok-btn:active { background: var(--accent-blue); border-color: var(--accent-blue); }
+
+        /* সেকেন্ডারি বাটন রো */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn-round {
+            background: var(--panel-bg);
+            border: 1px solid #333;
+            border-radius: 20px;
+            height: 70px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 12px;
+        }
+
+        .btn-round i { font-size: 20px; }
+        .btn-round:active { background: #333; transform: scale(0.95); }
+
+        /* ভলিউম ও চ্যানেল কন্ট্রোল */
+        .sliders-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 30px;
+            gap: 20px;
+        }
+
+        .vert-pill {
+            background: var(--panel-bg);
+            width: 75px;
+            height: 160px;
+            border-radius: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border: 1px solid #333;
+        }
+
+        .pill-btn {
             background: none;
             border: none;
             color: white;
             font-size: 24px;
-            cursor: pointer;
-            width: 50px;
+            width: 100%;
             height: 50px;
-            transition: 0.1s;
         }
 
-        .d-btn:active { color: var(--accent-blue); transform: scale(0.9); }
+        .pill-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+        }
 
-        .ok-btn {
-            grid-area: ok;
+        /* বটম বার */
+        .bottom-nav {
+            margin-top: auto;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding-bottom: 20px;
+        }
+
+        .mic-btn {
             width: 70px;
             height: 70px;
             background: var(--accent-blue);
             border-radius: 50%;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-        }
-
-        /* কন্ট্রোল বাটন রো */
-        .btn-row {
-            display: flex;
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .ctrl-btn {
-            width: 60px;
-            height: 60px;
-            background: var(--btn-gray);
-            border-radius: 15px;
             border: none;
             color: white;
-            font-size: 14px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 0 #222;
-            cursor: pointer;
-        }
-
-        .ctrl-btn:active { transform: translateY(3px); box-shadow: none; }
-
-        .vol-ch-container {
-            display: flex;
-            gap: 40px;
-            margin-top: 30px;
-        }
-
-        .vertical-ctrl {
-            display: flex;
-            flex-direction: column;
-            background: #222;
-            border-radius: 30px;
-            padding: 10px;
-            gap: 15px;
-        }
-
-        .v-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 20px;
-            padding: 10px;
-            cursor: pointer;
-        }
-
-        .v-label { font-size: 10px; opacity: 0.5; text-align: center; }
-
-        .voice-btn {
-            margin-top: auto;
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(145deg, #3d85c6, #2980b9);
-            border-radius: 50%;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
+            font-size: 28px;
+            box-shadow: 0 10px 20px rgba(61, 133, 198, 0.4);
         }
     </style>
 </head>
 <body>
 
-    <div class="remote-container">
-        <div class="brand">GEMINI OS 3.0</div>
-        
-        <button class="power-btn" onclick="sendCommand('power')">⏻</button>
-
-        <div class="dpad">
-            <button class="d-btn" style="grid-area: up;" onclick="sendCommand('up')">▲</button>
-            <button class="d-btn" style="grid-area: left;" onclick="sendCommand('left')">◀</button>
-            <button class="ok-btn" onclick="sendCommand('ok')">OK</button>
-            <button class="d-btn" style="grid-area: right;" onclick="sendCommand('right')">▶</button>
-            <button class="d-btn" style="grid-area: down;" onclick="sendCommand('down')">▼</button>
+    <div class="remote-app">
+        <div class="header">
+            <div class="brand-logo">GEMINI OS 3.0</div>
+            <button class="power-btn" onclick="sendCmd('power')">⏻</button>
         </div>
 
-        <div class="btn-row">
-            <button class="ctrl-btn" onclick="sendCommand('back')">↩<br>BACK</button>
-            <button class="ctrl-btn" onclick="sendCommand('home')">🏠<br>HOME</button>
-            <button class="ctrl-btn" onclick="sendCommand('play_pause')">⏯<br>P/P</button>
+        <div class="dpad-outer">
+            <button class="dpad-btn up" onclick="sendCmd('up')">▲</button>
+            <button class="dpad-btn left" onclick="sendCmd('left')">◀</button>
+            <button class="ok-btn" onclick="sendCmd('ok')">OK</button>
+            <button class="dpad-btn right" onclick="sendCmd('right')">▶</button>
+            <button class="dpad-btn down" onclick="sendCmd('down')">▼</button>
         </div>
 
-        <div class="vol-ch-container">
-            <div class="vertical-ctrl">
-                <button class="v-btn" onclick="sendCommand('vol_up')">+</button>
-                <div class="v-label">VOL</div>
-                <button class="v-btn" onclick="sendCommand('vol_down')">-</button>
+        <div class="controls-grid">
+            <button class="btn-round" onclick="sendCmd('back')"><span>↩</span> BACK</button>
+            <button class="btn-round" onclick="sendCmd('home')"><span>🏠</span> HOME</button>
+            <button class="btn-round" onclick="sendCmd('play_pause')"><span>⏯</span> P/P</button>
+        </div>
+
+        <div class="sliders-row">
+            <div class="vert-pill">
+                <button class="pill-btn" onclick="sendCmd('vol_up')">+</button>
+                <div class="pill-label">VOL</div>
+                <button class="pill-btn" onclick="sendCmd('vol_down')">−</button>
             </div>
-            <div class="vertical-ctrl">
-                <button class="v-btn" onclick="sendCommand('next_video')">∧</button>
-                <div class="v-label">CH</div>
-                <button class="v-btn" onclick="sendCommand('back')">∨</button>
+            <div class="vert-pill">
+                <button class="pill-btn" onclick="sendCmd('next_ch')">∧</button>
+                <div class="pill-label">CH</div>
+                <button class="pill-btn" onclick="sendCmd('prev_ch')">∨</button>
             </div>
         </div>
 
-        <button class="voice-btn" onclick="startVoiceSearch()">🎤</button>
+        <div class="bottom-nav">
+            <button class="mic-btn" onclick="startVoice()">🎤</button>
+        </div>
     </div>
 
     <script>
-        function sendCommand(action) {
-            // হ্যাপটিক ভাইব্রেশন (মোবাইলের জন্য)
-            if (navigator.vibrate) navigator.vibrate(40);
-
-            // পাইথন সার্ভারে রিকোয়েস্ট পাঠানো
-            fetch(`/api/${action}`)
-                .then(res => console.log('Action Sent:', action))
-                .catch(err => console.error('Connection Lost'));
+        // হ্যাপটিক ফিডব্যাক (মোবাইলে ভাইব্রেশন)
+        function vibrate() {
+            if (navigator.vibrate) navigator.vibrate(50);
         }
 
-        function startVoiceSearch() {
-            const query = prompt("What do you want to search?");
-            if (query) {
-                fetch(`/search?q=${encodeURIComponent(query)}`);
-            }
+        function sendCmd(action) {
+            vibrate();
+            console.log("Command Sent:", action);
+
+            // সুপাবেস বা এপিআই এর মাধ্যমে টিভিতে সিগন্যাল পাঠানো
+            // উদাহরণ: fetch(`/api/remote?command=${action}`);
+            
+            // আপনার বর্তমান সিস্টেম অনুযায়ী এখানে fetch কল করুন
+            fetch(`https://your-api-url.com/remote?cmd=${action}`).catch(e => {
+                // অফলাইন মোডে বা লোকাললি এরর হ্যান্ডেল করুন
+            });
+        }
+
+        function startVoice() {
+            vibrate();
+            const q = prompt("কী খুঁজতে চান?");
+            if(q) sendCmd('search&q=' + encodeURIComponent(q));
         }
     </script>
 </body>
