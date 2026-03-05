@@ -19,52 +19,48 @@
 
         .video-js { width: 100vw; height: 100vh; }
 
-        /* প্লেলিস্ট ড্রয়ার (বাম দিকে থাকবে) */
+        /* প্লেলিস্ট ড্রয়ার */
         #playlist-drawer {
             position: absolute; top: 0; left: -350px;
-            width: 320px; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            width: 300px; height: 100%;
+            background: rgba(15, 15, 15, 0.95);
             backdrop-filter: blur(20px);
-            z-index: 20; transition: 0.5s;
+            z-index: 20; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border-right: 1px solid rgba(255,255,255,0.1);
             overflow-y: auto;
-            padding: 20px 10px;
+            padding: 20px 15px;
         }
 
         #playlist-drawer.open { left: 0; }
 
         .ch-item {
-            padding: 12px 15px;
-            margin-bottom: 5px;
+            padding: 15px; margin-bottom: 8px;
             background: rgba(255,255,255,0.05);
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #ccc;
-            transition: 0.2s;
+            border-radius: 12px; cursor: pointer;
+            font-size: 14px; color: #eee;
+            border: 1px solid transparent;
         }
 
         .ch-item:hover, .ch-item:focus {
-            background: #3d85c6; color: white; outline: none;
+            background: #3d85c6; border-color: white; outline: none;
         }
 
+        /* UI Elements */
         .player-info {
             position: absolute; top: 30px; left: 40px;
-            z-index: 10; color: white;
-            background: rgba(0,0,0,0.6);
-            padding: 15px 30px; border-radius: 20px;
-            backdrop-filter: blur(15px);
-            opacity: 0; transition: 0.8s; pointer-events: none;
+            z-index: 10; color: white; background: rgba(0,0,0,0.7);
+            padding: 15px 25px; border-radius: 15px;
+            opacity: 0; transition: 0.5s;
         }
 
         .show-ui .player-info, .show-ui .back-btn, .show-ui #list-toggle { opacity: 1; }
 
         .back-btn, #list-toggle {
             position: absolute; top: 30px; z-index: 21;
-            background: rgba(255,255,255,0.1);
-            color: white; border: 2px solid rgba(255,255,255,0.2); 
-            padding: 12px 25px; border-radius: 50px; 
-            cursor: pointer; font-weight: bold; opacity: 0; transition: 0.5s;
+            background: rgba(255,255,255,0.1); color: white;
+            border: 1px solid rgba(255,255,255,0.2); 
+            padding: 12px 20px; border-radius: 50px; 
+            cursor: pointer; opacity: 0; transition: 0.5s;
         }
 
         .back-btn { right: 40px; }
@@ -72,26 +68,29 @@
 
         .loading-overlay {
             position: fixed; top:0; left:0; width:100%; height:100%;
-            background: black; z-index: 100; display: flex;
-            align-items: center; justify-content: center; color: #3d85c6;
+            background: #000; z-index: 100; display: flex;
+            flex-direction: column; align-items: center; justify-content: center; color: #3d85c6;
         }
     </style>
 </head>
 <body class="show-ui">
 
-    <div id="loader" class="loading-overlay">Parsing Playlist... Please Wait</div>
+    <div id="loader" class="loading-overlay">
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">Gemini Stream</div>
+        <div id="status">Syncing Playlist...</div>
+    </div>
 
-    <button id="list-toggle" onclick="togglePlaylist()">☰ Channel List</button>
-    <button class="back-btn" id="closeBtn" onclick="goBack()">✕ Close</button>
+    <button id="list-toggle" onclick="togglePlaylist()">☰ Channels</button>
+    <button class="back-btn" onclick="goBack()">✕ Close</button>
 
     <div id="playlist-drawer">
-        <h3 style="color: #3d85c6; margin-left: 10px;">Channels</h3>
+        <h2 style="color: #3d85c6; margin-bottom: 20px;">India Live TV</h2>
         <div id="channel-container"></div>
     </div>
 
     <div class="player-info">
-        <div id="ch-name" style="font-size: 24px; font-weight: bold;">Loading...</div>
-        <div id="user-tag" style="font-size: 12px; opacity: 0.6;">Syncing...</div>
+        <div id="ch-name" style="font-size: 20px; font-weight: bold;">Loading Stream...</div>
+        <div id="user-tag" style="font-size: 12px; opacity: 0.6; margin-top: 5px;">Remote Connected</div>
     </div>
 
     <video id="gemini-live-player" class="video-js vjs-big-play-centered" controls autoplay preload="auto"></video>
@@ -102,40 +101,44 @@
         const params = new URLSearchParams(window.location.search);
         const sourceUrl = params.get('url');
         const player = videojs('gemini-live-player');
+        const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
+        // ১. শুরু করার ফাংশন
         async function init() {
             if (!sourceUrl) return goBack();
 
-            // যদি এটি একটি M3U প্লেলিস্ট হয়
-            if (sourceUrl.endsWith('.m3u') || sourceUrl.includes('m3u')) {
+            if (sourceUrl.includes('m3u')) {
                 await parseM3U(sourceUrl);
                 document.getElementById('loader').style.display = 'none';
-                togglePlaylist(); // প্লেলিস্টটি অটো ওপেন হবে
             } else {
                 playStream(sourceUrl, params.get('name') || "Live TV");
                 document.getElementById('loader').style.display = 'none';
             }
+            
+            setupRemoteListener();
         }
 
-        // M3U Parser: লিঙ্ক থেকে চ্যানেলের নাম এবং ইউআরএল বের করবে
+        // ২. M3U Parser (CORS Proxy ব্যবহার করে)
         async function parseM3U(url) {
             try {
-                const response = await fetch(url);
+                // CORS সমস্যার সমাধানের জন্য প্রক্সি ব্যবহার
+                const proxy = "https://api.allorigins.win/raw?url=";
+                const response = await fetch(proxy + encodeURIComponent(url));
                 const text = await response.text();
+                
                 const lines = text.split('\n');
                 const container = document.getElementById('channel-container');
-                
                 let currentName = "";
 
                 lines.forEach(line => {
+                    line = line.trim();
                     if (line.startsWith('#EXTINF:')) {
-                        currentName = line.split(',')[1] || "Unnamed Channel";
+                        currentName = line.split(',')[1] || "Unknown Channel";
                     } else if (line.startsWith('http')) {
-                        const channelUrl = line.trim();
+                        const channelUrl = line;
                         const btn = document.createElement('div');
                         btn.className = 'ch-item';
                         btn.innerText = currentName;
-                        btn.tabIndex = 0;
                         btn.onclick = () => {
                             playStream(channelUrl, btn.innerText);
                             togglePlaylist();
@@ -144,8 +147,8 @@
                     }
                 });
             } catch (e) {
-                alert("Could not load playlist. Check internet or URL.");
-                goBack();
+                document.getElementById('status').innerText = "Error: Failed to fetch playlist.";
+                console.error(e);
             }
         }
 
@@ -153,9 +156,9 @@
             document.getElementById('ch-name').innerText = name;
             player.src({
                 src: url,
-                type: (url.includes('m3u8')) ? 'application/x-mpegURL' : 'video/mp4'
+                type: 'application/x-mpegURL'
             });
-            player.play();
+            player.play().catch(e => console.log("Auto-play blocked or failed."));
         }
 
         function togglePlaylist() {
@@ -164,11 +167,30 @@
 
         function goBack() { window.location.href = 'giminios.html'; }
 
-        // রিমোট কন্ট্রোল সাপোর্ট
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'm' || e.key === 'Menu') togglePlaylist();
-            if (e.key === 'Backspace') goBack();
-        });
+        // ৩. রিমোট কমান্ড লিসেনার (Supabase)
+        function setupRemoteListener() {
+            supabaseClient
+                .channel('remote-control')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'remote_commands' }, payload => {
+                    const cmd = payload.new.command;
+                    handleRemote(cmd);
+                })
+                .subscribe();
+        }
+
+        function handleRemote(cmd) {
+            if (cmd === 'back') goBack();
+            if (cmd === 'ok') {
+                if (document.getElementById('playlist-drawer').classList.contains('open')) {
+                    document.activeElement.click();
+                } else {
+                    player.paused() ? player.play() : player.pause();
+                }
+            }
+            if (cmd === 'up') /* Focus Logic Here */;
+            if (cmd === 'vol_up') player.volume(player.volume() + 0.1);
+            if (cmd === 'vol_down') player.volume(player.volume() - 0.1);
+        }
 
         init();
     </script>
