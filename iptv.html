@@ -41,15 +41,28 @@
     <script>
         window.addEventListener('load', async () => {
             const player = videojs('gemini-live-player');
-            // সরাসরি এখানে লিংক দিয়েছি
             const sourceUrl = "https://iptv-org.github.io/iptv/countries/in.m3u";
 
             try {
-                const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(sourceUrl);
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error("Connection failed");
+                // একাধিক প্রক্সি লিঙ্ক ট্রাই করার ব্যবস্থা
+                const proxies = [
+                    "https://api.allorigins.win/raw?url=",
+                    "https://corsproxy.io/?"
+                ];
                 
-                const text = await response.text();
+                let text = null;
+                for (let proxy of proxies) {
+                    try {
+                        const response = await fetch(proxy + encodeURIComponent(sourceUrl));
+                        if (response.ok) {
+                            text = await response.text();
+                            break;
+                        }
+                    } catch (e) { continue; }
+                }
+
+                if (!text) throw new Error("All proxy servers failed");
+                
                 const container = document.getElementById('channel-container');
                 const searchBox = document.getElementById('search-box');
                 const lines = text.split('\n');
