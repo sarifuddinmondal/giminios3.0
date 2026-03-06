@@ -6,7 +6,6 @@
     <title>Gemini Stream - Live TV</title>
     
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-    <script src="config.js"></script>
 
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: white; }
@@ -41,14 +40,9 @@
 
     <script>
         window.addEventListener('load', async () => {
-            if (typeof window.CONFIG === 'undefined') {
-                document.getElementById('status').innerText = "Config Error!";
-                return;
-            }
-
             const player = videojs('gemini-live-player');
-            const params = new URLSearchParams(window.location.search);
-            const sourceUrl = params.get('url') || "https://iptv-org.github.io/iptv/countries/in.m3u";
+            // সরাসরি এখানে লিংক দিয়েছি
+            const sourceUrl = "https://iptv-org.github.io/iptv/countries/in.m3u";
 
             try {
                 const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(sourceUrl);
@@ -78,7 +72,6 @@
                     }
                 });
 
-                // সার্চ লজিক
                 searchBox.onkeyup = () => {
                     const filter = searchBox.value.toUpperCase();
                     const items = document.getElementsByClassName('ch-item');
