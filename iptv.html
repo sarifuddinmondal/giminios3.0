@@ -7,13 +7,13 @@
     
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <script src="config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: white; }
         .video-js { width: 100vw; height: 100vh; }
         #playlist-drawer { position: absolute; top: 0; left: -350px; width: 300px; height: 100%; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(20px); z-index: 20; transition: 0.4s; padding: 20px; overflow-y: auto; border-right: 1px solid #333; }
         #playlist-drawer.open { left: 0; }
+        #search-box { width: 90%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: none; background: #222; color: white; }
         .ch-item { padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: 0.3s; }
         .ch-item:hover { background: #3d85c6; border-color: white; }
         .loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -31,6 +31,7 @@
 
     <div id="playlist-drawer">
         <h2 style="color:#3d85c6;">Live TV</h2>
+        <input type="text" id="search-box" placeholder="চ্যানেল সার্চ করুন...">
         <div id="channel-container"></div>
     </div>
 
@@ -40,7 +41,6 @@
 
     <script>
         window.addEventListener('load', async () => {
-            // কনফিগ চেক
             if (typeof window.CONFIG === 'undefined') {
                 document.getElementById('status').innerText = "Config Error!";
                 return;
@@ -51,13 +51,13 @@
             const sourceUrl = params.get('url') || "https://iptv-org.github.io/iptv/countries/in.m3u";
 
             try {
-                // মেইন প্লেলিস্ট ফেচ করা
                 const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(sourceUrl);
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error("Connection failed");
                 
                 const text = await response.text();
                 const container = document.getElementById('channel-container');
+                const searchBox = document.getElementById('search-box');
                 const lines = text.split('\n');
 
                 lines.forEach((line, index) => {
@@ -77,6 +77,15 @@
                         }
                     }
                 });
+
+                // সার্চ লজিক
+                searchBox.onkeyup = () => {
+                    const filter = searchBox.value.toUpperCase();
+                    const items = document.getElementsByClassName('ch-item');
+                    for (let item of items) {
+                        item.style.display = item.innerText.toUpperCase().includes(filter) ? "" : "none";
+                    }
+                };
                 
                 document.getElementById('loader').style.display = 'none';
             } catch (e) {
