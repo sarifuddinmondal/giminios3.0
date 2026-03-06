@@ -14,7 +14,7 @@
         .video-js { width: 100vw; height: 100vh; }
         #playlist-drawer { position: absolute; top: 0; left: -350px; width: 300px; height: 100%; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(20px); z-index: 20; transition: 0.4s; padding: 20px; overflow-y: auto; border-right: 1px solid #333; }
         #playlist-drawer.open { left: 0; }
-        .ch-item { padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+        .ch-item { padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: 0.3s; }
         .ch-item:hover { background: #3d85c6; border-color: white; }
         .loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
@@ -26,8 +26,8 @@
         <div id="status">Syncing Playlist...</div>
     </div>
 
-    <button style="position:absolute; top:20px; left:20px; z-index:25; padding:10px;" onclick="document.getElementById('playlist-drawer').classList.toggle('open')">☰ Channels</button>
-    <button style="position:absolute; top:20px; right:20px; z-index:25; padding:10px;" onclick="window.location.href='giminios.html'">✕ Close</button>
+    <button style="position:absolute; top:20px; left:20px; z-index:25; padding:10px; cursor:pointer;" onclick="document.getElementById('playlist-drawer').classList.toggle('open')">☰ Channels</button>
+    <button style="position:absolute; top:20px; right:20px; z-index:25; padding:10px; cursor:pointer;" onclick="window.location.href='giminios.html'">✕ Close</button>
 
     <div id="playlist-drawer">
         <h2 style="color:#3d85c6;">Live TV</h2>
@@ -37,24 +37,24 @@
     <video id="gemini-live-player" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto"></video>
 
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script>
 
     <script>
         window.addEventListener('load', async () => {
+            // কনফিগ চেক
             if (typeof window.CONFIG === 'undefined') {
-                document.getElementById('status').innerText = "Error: config.js not loaded!";
+                document.getElementById('status').innerText = "Config Error!";
                 return;
             }
 
             const player = videojs('gemini-live-player');
             const params = new URLSearchParams(window.location.search);
-            // যদি ইউআরএল প্যারামিটার না থাকে তবে ডিফল্ট লিঙ্ক ব্যবহার করবে
             const sourceUrl = params.get('url') || "https://iptv-org.github.io/iptv/countries/in.m3u";
 
             try {
+                // মেইন প্লেলিস্ট ফেচ করা
                 const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(sourceUrl);
                 const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error("Playlist fetch failed");
+                if (!response.ok) throw new Error("Connection failed");
                 
                 const text = await response.text();
                 const container = document.getElementById('channel-container');
@@ -77,6 +77,7 @@
                         }
                     }
                 });
+                
                 document.getElementById('loader').style.display = 'none';
             } catch (e) {
                 document.getElementById('status').innerText = "Sync Failed: " + e.message;
